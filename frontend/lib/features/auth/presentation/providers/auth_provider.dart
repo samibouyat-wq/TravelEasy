@@ -17,7 +17,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> login({required String email, required String password}) async {
     final dio = _ref.read(dioProvider);
-    final response = await dio.post('/auth/login', data: {'email': email, 'password': password});
+    final response = await dio.post('/auth/login', data: {
+      'email': email,
+      'password': password,
+    });
     final token = response.data['access_token'] as String;
     final userId = response.data['user']['id'] as String;
     await _storage.write(key: 'access_token', value: token);

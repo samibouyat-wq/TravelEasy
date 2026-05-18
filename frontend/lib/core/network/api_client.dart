@@ -11,7 +11,6 @@ final dioProvider = Provider<Dio>((ref) {
     receiveTimeout: ApiConstants.receiveTimeout,
     headers: {'Content-Type': 'application/json'},
   ));
-
   dio.interceptors.add(_AuthInterceptor());
   return dio;
 });
@@ -33,9 +32,6 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      // TODO: déconnecter l'utilisateur
-    }
     return handler.next(err);
   }
 }
