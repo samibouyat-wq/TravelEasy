@@ -1,5 +1,5 @@
-from typing import List, Union
-from pydantic import field_validator
+from typing import Any, List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -56,16 +56,19 @@ class Settings(BaseSettings):
     # Weather
     OPENWEATHER_API_KEY: str = ""
 
-    @field_validator("ALLOWED_HOSTS", "ALLOWED_ORIGINS", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def parse_list(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            v = v.strip()
-            if v.startswith("["):
-                import json
-                return json.loads(v)
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
+    def parse_comma_separated_lists(cls, data: Any) -> Any:
+        for field in ("ALLOWED_HOSTS", "ALLOWED_ORIGINS"):
+            value = data.get(field)
+            if isinstance(value, str):
+                value = value.strip()
+                if value.startswith("["):
+                    import json
+                    data[field] = json.loads(value)
+                else:
+                    data[field] = [v.strip() for v in value.split(",") if v.strip()]
+        return data
 
     class Config:
         env_file = ".env"
