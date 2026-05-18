@@ -54,7 +54,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Ouicooly AI', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Text('TravelEasy AI', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 Text('En ligne', style: theme.textTheme.bodySmall?.copyWith(color: Colors.green)),
               ],
             ),
@@ -90,7 +90,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                           mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            if (!isUser) ...[  
+                            if (!isUser) ...[
                               const CircleAvatar(
                                 backgroundColor: Color(0xFF2563EB),
                                 radius: 14,

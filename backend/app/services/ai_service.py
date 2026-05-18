@@ -8,7 +8,7 @@ from app.core.config import settings
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 SYSTEM_PROMPT = """
-Tu es Ouicooly, un assistant expert en voyages. Tu aides les utilisateurs à planifier
+Tu es TravelEasy, un assistant expert en voyages. Tu aides les utilisateurs à planifier
 leur voyage en tenant compte de leur budget, de leurs dates et de leurs préférences.
 Tu proposes des options de transport (train, avion), d'hébergement et d'activités.
 Tu réponds toujours en français de manière concise et enthousiaste.
@@ -36,7 +36,6 @@ async def chat_with_assistant(
 
 
 async def generate_trip_proposals(trip_id: str) -> None:
-    """Génère des propositions IA pour un voyage (exécuté en background task)."""
     from app.core.database import AsyncSessionLocal
     from app.models.trip import Trip, TripStatus
     from sqlalchemy import select

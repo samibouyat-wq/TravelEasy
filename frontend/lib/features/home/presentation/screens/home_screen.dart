@@ -9,7 +9,7 @@ class HomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ouicooly'),
+        title: const Text('TravelEasy'),
         actions: [
           IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
         ],
@@ -19,7 +19,6 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero banner
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -75,7 +74,7 @@ class HomeScreen extends StatelessWidget {
                   backgroundColor: Color(0xFF2563EB),
                   child: Icon(Icons.smart_toy_outlined, color: Colors.white),
                 ),
-                title: const Text('Demandez à Ouicooly'),
+                title: const Text('Demandez à TravelEasy AI'),
                 subtitle: const Text('Je vous aide à trouver le meilleur voyage !'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () => context.push('/chat'),

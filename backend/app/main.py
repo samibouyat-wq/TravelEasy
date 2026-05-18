@@ -16,15 +16,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Ouicooly API",
-    description="API de l'application agence de voyage IA Ouicooly",
+    title="TravelEasy API",
+    description="API de l'application agence de voyage IA TravelEasy",
     version="1.0.0",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan,
 )
 
-# Middlewares
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -36,7 +35,6 @@ app.add_middleware(
 if not settings.DEBUG:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 
-# Routes
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentification"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Utilisateurs"])
 app.include_router(trips.router, prefix="/api/v1/trips", tags=["Voyages"])
