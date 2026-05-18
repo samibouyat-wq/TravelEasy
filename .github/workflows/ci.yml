@@ -7,7 +7,6 @@ on:
     branches: [main, develop]
 
 jobs:
-  # ─────────────────────────────────────────────────
   backend-lint:
     name: Backend — Lint
     runs-on: ubuntu-latest
@@ -16,22 +15,17 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-
       - name: Install dependencies
         run: pip install ruff
-
       - name: Run Ruff linter
         run: ruff check app/ tests/
-
       - name: Run Ruff formatter check
         run: ruff format --check app/ tests/
 
-  # ─────────────────────────────────────────────────
   backend-test:
     name: Backend — Tests
     runs-on: ubuntu-latest
@@ -40,9 +34,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: ouicooly_test
-          POSTGRES_PASSWORD: ouicooly_test
-          POSTGRES_DB: ouicooly_test
+          POSTGRES_USER: traveleasy_test
+          POSTGRES_PASSWORD: traveleasy_test
+          POSTGRES_DB: traveleasy_test
         ports:
           - 5432:5432
         options: >-
@@ -63,25 +57,21 @@ jobs:
       run:
         working-directory: backend
     env:
-      DATABASE_URL: postgresql+asyncpg://ouicooly_test:ouicooly_test@localhost:5432/ouicooly_test
+      DATABASE_URL: postgresql+asyncpg://traveleasy_test:traveleasy_test@localhost:5432/traveleasy_test
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: ci-test-secret-key-not-for-production
       STRIPE_SECRET_KEY: sk_test_dummy
       OPENAI_API_KEY: sk-dummy
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Run tests with coverage
         run: pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
-
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
         if: always()
@@ -89,7 +79,6 @@ jobs:
           file: ./coverage.xml
           flags: backend
 
-  # ─────────────────────────────────────────────────
   frontend-analyze:
     name: Frontend — Analyze (Flutter)
     runs-on: ubuntu-latest
@@ -98,54 +87,45 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.22.3'
           channel: stable
           cache: true
-
       - name: Get Flutter packages
         run: flutter pub get
-
       - name: Analyze Dart code
         run: flutter analyze
-
       - name: Run Flutter tests
         run: flutter test
 
-  # ─────────────────────────────────────────────────
   docker-build:
     name: Docker — Build images
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-analyze]
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Build backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: false
-          tags: ouicooly-backend:ci
+          tags: traveleasy-backend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: false
-          tags: ouicooly-frontend:ci
+          tags: traveleasy-frontend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
       - name: Build nginx image
         uses: docker/build-push-action@v5
         with:
           context: ./nginx
           push: false
-          tags: ouicooly-nginx:ci
+          tags: traveleasy-nginx:ci
