@@ -1,8 +1,8 @@
-# Ouicooly — Application Agence de Voyage IA
+# TravelEasy — Application Agence de Voyage IA
 
 > Application mobile & web de planification de voyage propulsée par l'IA.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.22-blue?logo=flutter)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
@@ -25,7 +25,7 @@
 
 ## Présentation
 
-Ouicooly permet à un utilisateur de renseigner sa **ville de départ**, sa **destination**, son **budget**, ses **dates** et ses **préférences** de voyage.
+TravelEasy permet à un utilisateur de renseigner sa **ville de départ**, sa **destination**, son **budget**, ses **dates** et ses **préférences** de voyage.
 
 Le moteur IA analyse les offres disponibles (trains, vols, hôtels, activités) et propose des itinéraires optimisés. La réservation et le paiement se font directement dans l'application.
 
@@ -44,17 +44,17 @@ Le moteur IA analyse les offres disponibles (trains, vols, hôtels, activités) 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   CLIENT                            │
-│  Flutter (iOS / Android / Web)                      │
-└────────────────────┬────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                   CLIENT                               │
+│  Flutter (iOS / Android / Web)                         │
+└────────────────────┬───────────────────────────────────┘
                      │ HTTPS / REST + WebSocket
-┌────────────────────▼────────────────────────────────┐
-│                  BACKEND (FastAPI)                  │
-│  Auth │ Trips │ Bookings │ Payments │ AI │ Notifs   │
-└──┬──────┬─────────┬──────────┬────────┬─────────────┘
-   │      │         │          │        │
-  PG   Redis    Stripe    OpenAI   Firebase
+┌────────────────────▼───────────────────────────────────┐
+│                  BACKEND (FastAPI)                     │
+│  Auth │ Trips │ Bookings │ Payments │ AI │ Notifs       │
+└──┬──────────┬─────────────┬──────────────┬─────────────┘
+   │          │             │              │
+  PG       Redis         Stripe        OpenAI / Firebase
 ```
 
 ---
@@ -63,7 +63,7 @@ Le moteur IA analyse les offres disponibles (trains, vols, hôtels, activités) 
 
 | Couche | Technologie |
 |--------|-------------|
-| Mobile + Web | Flutter 3.x |
+| Mobile + Web | Flutter 3.22 |
 | Backend | FastAPI (Python 3.12) |
 | Base de données | PostgreSQL 16 |
 | Cache | Redis 7 |
@@ -82,15 +82,15 @@ Le moteur IA analyse les offres disponibles (trains, vols, hôtels, activités) 
 
 - Docker >= 24
 - Docker Compose >= 2.20
-- Flutter SDK >= 3.19 (pour le dev frontend)
-- Python >= 3.12 (pour le dev backend)
+- Flutter SDK >= 3.22 (pour le dev frontend local)
+- Python >= 3.12 (pour le dev backend local)
 
 ### Lancer l'environnement complet
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/samibouyat-wq/ouicooly.git
-cd ouicooly
+git clone https://github.com/samibouyat-wq/TravelEasy.git
+cd TravelEasy
 
 # 2. Copier et configurer les variables d'environnement
 cp .env.example .env
@@ -143,14 +143,14 @@ Deux workflows GitHub Actions :
 | Workflow | Déclencheur | Actions |
 |----------|------------|--------|
 | `ci.yml` | Push / PR sur toutes branches | Lint, Tests, Build Docker |
-| `cd.yml` | Push sur `main` | Build + Push Docker Hub + Deploy |
+| `cd.yml` | Push sur `main` | Build + Push GHCR + Deploy |
 
 ---
 
 ## Structure du projet
 
 ```
-ouicooly/
+traveleasy/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml
@@ -171,8 +171,6 @@ ouicooly/
 │   │   ├── features/      # Auth, Search, Booking, AI
 │   │   └── services/      # API, Auth, Notification
 │   ├── web/
-│   ├── android/
-│   ├── ios/
 │   ├── Dockerfile
 │   └── pubspec.yaml
 ├── nginx/
@@ -197,4 +195,4 @@ ouicooly/
 
 ## Licence
 
-MIT © 2026 Ouicooly
+MIT © 2026 TravelEasy
