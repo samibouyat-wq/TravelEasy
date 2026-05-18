@@ -1,6 +1,5 @@
 from typing import List
 from pydantic_settings import BaseSettings
-from pydantic import AnyHttpUrl, field_validator
 
 
 class Settings(BaseSettings):
@@ -48,6 +47,7 @@ class Settings(BaseSettings):
 
     # Booking
     BOOKING_API_KEY: str = ""
+    BOOKING_API_BASE_URL: str = "https://distribution-xml.booking.com/2.0"
 
     # Google Maps
     GOOGLE_MAPS_API_KEY: str = ""
