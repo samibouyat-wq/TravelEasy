@@ -3,12 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'features/auth/presentation/providers/auth_provider.dart';
 
-class TravelEasyApp extends ConsumerWidget {
+class TravelEasyApp extends ConsumerStatefulWidget {
   const TravelEasyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TravelEasyApp> createState() => _TravelEasyAppState();
+}
+
+class _TravelEasyAppState extends ConsumerState<TravelEasyApp> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+      () => ref.read(authNotifierProvider.notifier).checkAuth(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'TravelEasy',
