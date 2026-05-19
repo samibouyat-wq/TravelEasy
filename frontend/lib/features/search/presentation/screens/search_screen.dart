@@ -62,17 +62,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
     setState(() => _loading = true);
     try {
-      final notifier = ref.read(searchNotifierProvider.notifier);
-      await notifier.searchTrip(
-        origin: _originCtrl.text.trim(),
-        destination: _destCtrl.text.trim(),
-        departureDate: _departureDate!,
-        returnDate: _returnDate,
-        budgetMin: _budgetMin,
-        budgetMax: _budgetMax,
-        numTravelers: _travelers,
-        transportType: _transport,
-      );
+      await ref.read(searchNotifierProvider.notifier).searchTrip(
+            origin: _originCtrl.text.trim(),
+            destination: _destCtrl.text.trim(),
+            departureDate: _departureDate!,
+            returnDate: _returnDate,
+            budgetMin: _budgetMin,
+            budgetMax: _budgetMax,
+            numTravelers: _travelers,
+            transportType: _transport,
+          );
       if (mounted) {
         ref.invalidate(tripsProvider);
         context.go('/trips');
@@ -90,80 +89,70 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  String _formatDate(DateTime? d) {
+    if (d == null) return '';
+    return DateFormat('dd MMM yyyy', 'fr').format(d);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fmt = DateFormat('dd/MM/yyyy', 'fr');
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        backgroundColor: const Color(0xFFF8FAFC),
         title: const Text('Nouveau voyage'),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Où souhaitez-vous aller ?',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
+              _SectionLabel('Itinéraire'),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _originCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Ville de départ',
-                  prefixIcon: const Icon(Icons.flight_takeoff),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: Icon(Icons.trip_origin, color: Color(0xFF1E40AF)),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Requis' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Requis' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _destCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Destination',
-                  prefixIcon: const Icon(Icons.flight_land),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: Icon(Icons.place, color: Color(0xFF059669)),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Requis' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Requis' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              _SectionLabel('Dates'),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickDate(isDeparture: true),
-                      style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                      icon: const Icon(Icons.calendar_today, size: 16),
-                      label: Text(_departureDate != null
-                          ? fmt.format(_departureDate!)
-                          : 'Aller'),
+                    child: _DateButton(
+                      label: _departureDate != null
+                          ? _formatDate(_departureDate)
+                          : 'Départ',
+                      icon: Icons.flight_takeoff,
+                      hasValue: _departureDate != null,
+                      onTap: () => _pickDate(isDeparture: true),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickDate(isDeparture: false),
-                      style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                      icon: const Icon(Icons.calendar_today, size: 16),
-                      label: Text(_returnDate != null
-                          ? fmt.format(_returnDate!)
-                          : 'Retour'),
+                    child: _DateButton(
+                      label: _returnDate != null
+                          ? _formatDate(_returnDate)
+                          : 'Retour',
+                      icon: Icons.flight_land,
+                      hasValue: _returnDate != null,
+                      onTap: () => _pickDate(isDeparture: false),
                     ),
                   ),
                 ],
@@ -172,14 +161,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Budget',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600)),
-                  Text(
-                    '${_budgetMin.toInt()}€ – ${_budgetMax.toInt()}€',
-                    style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold),
+                  _SectionLabel('Budget'),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E40AF).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_budgetMin.toInt()}€ – ${_budgetMax.toInt()}€',
+                      style: const TextStyle(
+                          color: Color(0xFF1E40AF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13),
+                    ),
                   ),
                 ],
               ),
@@ -188,6 +184,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 min: 0,
                 max: 3000,
                 divisions: 60,
+                activeColor: const Color(0xFF1E40AF),
                 labels: RangeLabels(
                     '${_budgetMin.toInt()}€', '${_budgetMax.toInt()}€'),
                 onChanged: (v) => setState(() {
@@ -196,84 +193,234 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 }),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: Text('Voyageurs',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600))),
-                  IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () => setState(() {
-                            if (_travelers > 1) _travelers--;
-                          })),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('$_travelers',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary)),
-                  ),
-                  IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () =>
-                          setState(() => _travelers++)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text('Transport',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+              _SectionLabel('Voyageurs'),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                      value: 'train',
-                      label: Text('Train'),
-                      icon: Icon(Icons.train)),
-                  ButtonSegment(
-                      value: 'flight',
-                      label: Text('Vol'),
-                      icon: Icon(Icons.flight)),
-                  ButtonSegment(
-                      value: 'car',
-                      label: Text('Voiture'),
-                      icon: Icon(Icons.directions_car)),
-                ],
-                selected: {_transport},
-                onSelectionChanged: (s) =>
-                    setState(() => _transport = s.first),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _loading ? null : _search,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  icon: _loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.auto_awesome),
-                  label: Text(
-                      _loading ? 'Lancement...' : 'Lancer la recherche IA',
-                      style: const TextStyle(fontSize: 16)),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.people_outline,
+                        color: Color(0xFF6B7280)),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                        child: Text('Nombre de voyageurs')),
+                    IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.remove_circle_outline,
+                            color: Color(0xFF1E40AF)),
+                        onPressed: () => setState(() {
+                              if (_travelers > 1) _travelers--;
+                            })),
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('$_travelers',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                    IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.add_circle_outline,
+                            color: Color(0xFF1E40AF)),
+                        onPressed: () =>
+                            setState(() => _travelers++)),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              _SectionLabel('Transport'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _TransportChip(
+                    value: 'train',
+                    label: 'Train',
+                    icon: Icons.train,
+                    selected: _transport == 'train',
+                    onTap: () => setState(() => _transport = 'train'),
+                  ),
+                  const SizedBox(width: 8),
+                  _TransportChip(
+                    value: 'flight',
+                    label: 'Avion',
+                    icon: Icons.flight,
+                    selected: _transport == 'flight',
+                    onTap: () => setState(() => _transport = 'flight'),
+                  ),
+                  const SizedBox(width: 8),
+                  _TransportChip(
+                    value: 'car',
+                    label: 'Voiture',
+                    icon: Icons.directions_car,
+                    selected: _transport == 'car',
+                    onTap: () => setState(() => _transport = 'car'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _loading ? null : _search,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _loading
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white)),
+                          SizedBox(width: 12),
+                          Text('Génération en cours...',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.auto_awesome, size: 20),
+                          SizedBox(width: 8),
+                          Text('Générer avec l\'IA',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF6B7280),
+          letterSpacing: 0.5));
+}
+
+class _DateButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool hasValue;
+  final VoidCallback onTap;
+  const _DateButton(
+      {required this.label,
+      required this.icon,
+      required this.hasValue,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: hasValue
+              ? const Color(0xFF1E40AF).withOpacity(0.06)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: hasValue
+                  ? const Color(0xFF1E40AF)
+                  : const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                size: 16,
+                color: hasValue
+                    ? const Color(0xFF1E40AF)
+                    : const Color(0xFF9CA3AF)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                    fontSize: 13,
+                    color: hasValue
+                        ? const Color(0xFF1E40AF)
+                        : const Color(0xFF9CA3AF),
+                    fontWeight: hasValue
+                        ? FontWeight.w600
+                        : FontWeight.normal),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransportChip extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  const _TransportChip(
+      {required this.value,
+      required this.label,
+      required this.icon,
+      required this.selected,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? const Color(0xFF1E40AF)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: selected
+                    ? const Color(0xFF1E40AF)
+                    : const Color(0xFFE5E7EB)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  color: selected ? Colors.white : const Color(0xFF6B7280),
+                  size: 20),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? Colors.white
+                          : const Color(0xFF6B7280))),
             ],
           ),
         ),
