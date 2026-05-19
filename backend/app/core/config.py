@@ -35,20 +35,20 @@ class Settings(BaseSettings):
 
     # OpenAI
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4-turbo-preview"
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
-    # SNCF
+    # SNCF / Navitia
     SNCF_API_KEY: str = ""
-    SNCF_API_BASE_URL: str = "https://api.sncf.com/v1"
+    SNCF_API_BASE_URL: str = "https://api.navitia.io/v1"
 
     # Amadeus
     AMADEUS_API_KEY: str = ""
     AMADEUS_API_SECRET: str = ""
     AMADEUS_BASE_URL: str = "https://test.api.amadeus.com"
 
-    # Booking
+    # Booking via RapidAPI
     BOOKING_API_KEY: str = ""
-    BOOKING_API_BASE_URL: str = "https://distribution-xml.booking.com/2.0"
+    BOOKING_API_HOST: str = "booking-com15.p.rapidapi.com"
 
     # Google Maps
     GOOGLE_MAPS_API_KEY: str = ""

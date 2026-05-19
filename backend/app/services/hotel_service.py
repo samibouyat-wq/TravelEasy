@@ -10,29 +10,26 @@ async def search_hotels(
     check_out: str,
     budget_max: float,
 ) -> List[dict]:
-    """Recherche les hôtels disponibles via Booking.com Rapid API."""
     if not settings.BOOKING_API_KEY:
         return []
 
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{settings.BOOKING_API_BASE_URL}/properties/list",
+            f"https://{settings.BOOKING_API_HOST}/api/v1/hotels/searchHotels",
             params={
-                "dest_type": "city",
                 "dest_id": destination,
-                "checkin_date": check_in,
-                "checkout_date": check_out,
+                "search_type": "city",
+                "arrival_date": check_in,
+                "departure_date": check_out,
+                "adults": "1",
+                "room_qty": "1",
                 "price_max": int(budget_max),
-                "room_number": 1,
-                "adults_number": 1,
-                "order_by": "price",
-                "page_number": 0,
-                "units": "metric",
-                "filter_by_currency": "EUR",
+                "currency_code": "EUR",
+                "languagecode": "fr",
             },
             headers={
                 "x-rapidapi-key": settings.BOOKING_API_KEY,
-                "x-rapidapi-host": "booking-com.p.rapidapi.com",
+                "x-rapidapi-host": settings.BOOKING_API_HOST,
             },
             timeout=15.0,
         )
@@ -40,17 +37,14 @@ async def search_hotels(
         if response.status_code != 200:
             return []
 
-        results = response.json().get("result", [])
+        results = response.json().get("data", {}).get("hotels", [])
         return [
             {
                 "type": "hotel",
                 "provider": "booking",
-                "name": h.get("hotel_name"),
-                "stars": h.get("class"),
-                "price_per_night": h.get("min_total_price"),
-                "address": h.get("address"),
-                "review_score": h.get("review_score"),
-                "url": h.get("url"),
+                "name": h.get("property", {}).get("name"),
+                "price_per_night": h.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value"),
+                "review_score": h.get("property", {}).get("reviewScore"),
                 "raw": h,
             }
             for h in results[:10]
