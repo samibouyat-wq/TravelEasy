@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/search_provider.dart';
+import '../../../trips/presentation/providers/trips_provider.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   final String? initialDestination;
@@ -73,7 +74,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         transportType: _transport,
       );
       if (mounted) {
-        ref.invalidate(tripsProviderFamily);
+        ref.invalidate(tripsProvider);
         context.go('/trips');
       }
     } catch (e) {
@@ -203,8 +204,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ?.copyWith(fontWeight: FontWeight.w600))),
                   IconButton(
                       icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () => setState(
-                          () {
+                      onPressed: () => setState(() {
                             if (_travelers > 1) _travelers--;
                           })),
                   Container(
