@@ -2,6 +2,7 @@ import uuid
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,6 +15,48 @@ from app.schemas.payment import PaymentIntentCreate, PaymentIntentResponse, Paym
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 router = APIRouter()
+
+
+class CheckoutSessionRequest(BaseModel):
+    trip_id: str
+    trip_title: str
+    amount: float
+    currency: str = "eur"
+
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
+
+
+@router.post("/create-checkout-session", response_model=CheckoutSessionResponse)
+async def create_checkout_session(
+    payload: CheckoutSessionRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": payload.currency,
+                        "product_data": {
+                            "name": payload.trip_title,
+                            "description": "Réservation via TravelEasy",
+                        },
+                        "unit_amount": int(payload.amount * 100),
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="payment",
+            success_url="http://localhost:3000/#/trips?payment=success",
+            cancel_url="http://localhost:3000/#/booking/" + payload.trip_id,
+            metadata={"user_id": user_id, "trip_id": payload.trip_id},
+        )
+        return CheckoutSessionResponse(checkout_url=session.url)
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/create-intent", response_model=PaymentIntentResponse)

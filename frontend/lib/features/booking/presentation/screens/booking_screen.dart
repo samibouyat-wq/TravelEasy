@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/network/api_client.dart';
 import '../providers/booking_provider.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
@@ -31,8 +33,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   void _startPolling() {
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       final trip = ref.read(tripDetailProvider(widget.tripId)).valueOrNull;
-      final proposals = _extractProposals(trip?['ai_proposals']);
-      if (proposals != null) {
+      if (_extractProposals(trip?['ai_proposals']) != null) {
         _timer?.cancel();
         return;
       }
@@ -45,27 +46,52 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     });
   }
 
-  List? _extractProposals(dynamic aiProposals) {
-    if (aiProposals == null) return null;
-    if (aiProposals is List) return aiProposals;
-    if (aiProposals is Map) {
-      if (aiProposals['voyages'] is List) return aiProposals['voyages'] as List;
-      if (aiProposals['proposals'] is List)
-        return aiProposals['proposals'] as List;
-      for (final v in aiProposals.values) {
+  List? _extractProposals(dynamic ai) {
+    if (ai == null) return null;
+    if (ai is List) return ai;
+    if (ai is Map) {
+      if (ai['voyages'] is List) return ai['voyages'] as List;
+      if (ai['proposals'] is List) return ai['proposals'] as List;
+      for (final v in ai.values) {
         if (v is List) return v;
       }
     }
     return null;
   }
 
-  void _confirmBooking(BuildContext context, dynamic proposal) {
-    showModalBottomSheet(
+  Future<void> _pay(
+      BuildContext context, Map<String, dynamic> trip, dynamic proposal) async {
+    final amount = (proposal['total_price'] as num?)?.toDouble() ?? 0;
+    final title = proposal['title'] ?? trip['title'] ?? 'Voyage TravelEasy';
+
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _BookingConfirmSheet(proposal: proposal),
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final dio = ref.read(dioProvider);
+      final response =
+          await dio.post('/payments/create-checkout-session', data: {
+        'trip_id': widget.tripId,
+        'trip_title': title,
+        'amount': amount,
+        'currency': 'eur',
+      });
+      final url = response.data['checkout_url'] as String;
+      if (context.mounted) Navigator.pop(context);
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Erreur paiement: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -96,21 +122,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               SliverToBoxAdapter(child: _TripHeader(trip: trip)),
               if (proposals == null)
                 const SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('L\'IA génère vos propositions...',
-                            style: TextStyle(color: Color(0xFF6B7280))),
-                        SizedBox(height: 8),
-                        Text('Cela prend 5 à 10 secondes.',
-                            style: TextStyle(
-                                color: Color(0xFF9CA3AF), fontSize: 12)),
-                      ],
-                    ),
-                  ),
+                  child: _LoadingProposals(),
                 )
               else
                 SliverPadding(
@@ -120,8 +132,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                       (context, i) => _ProposalCard(
                         proposal: proposals[i] as Map<String, dynamic>,
                         index: i,
-                        onBook: () =>
-                            _confirmBooking(context, proposals[i]),
+                        onBook: () => _pay(
+                            context, trip, proposals[i]),
                       ),
                       childCount: proposals.length,
                     ),
@@ -130,6 +142,38 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _LoadingProposals extends StatelessWidget {
+  const _LoadingProposals();
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'L\'IA génère vos propositions...',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151)),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Cela prend 5 à 10 secondes.',
+            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -159,33 +203,35 @@ class _TripHeader extends StatelessWidget {
             trip['title'] ?? '',
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.trip_origin, color: Colors.white70, size: 16),
+              const Icon(Icons.trip_origin, color: Colors.white70, size: 14),
               const SizedBox(width: 6),
               Text(trip['origin_city'] ?? '',
-                  style: const TextStyle(color: Colors.white70)),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 13)),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Icon(Icons.arrow_forward,
-                    color: Colors.white54, size: 16),
+                    color: Colors.white54, size: 14),
               ),
-              const Icon(Icons.place, color: Colors.white70, size: 16),
+              const Icon(Icons.place, color: Colors.white70, size: 14),
               const SizedBox(width: 6),
               Text(trip['destination_city'] ?? '',
-                  style: const TextStyle(color: Colors.white70)),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 13)),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
             children: [
-              _InfoChip(Icons.calendar_today,
-                  trip['departure_date'] ?? ''),
-              const SizedBox(width: 8),
+              _InfoChip(
+                  Icons.calendar_today, trip['departure_date'] ?? ''),
               _InfoChip(Icons.people,
                   '${trip['num_travelers'] ?? 1} voyageur(s)'),
             ],
@@ -209,11 +255,13 @@ class _InfoChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: Colors.white),
+          Icon(icon, size: 11, color: Colors.white),
           const SizedBox(width: 4),
           Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 12)),
+              style:
+                  const TextStyle(color: Colors.white, fontSize: 11)),
         ],
       ),
     );
@@ -227,28 +275,28 @@ class _ProposalCard extends StatelessWidget {
   const _ProposalCard(
       {required this.proposal, required this.index, required this.onBook});
 
+  static const _colors = [
+    Color(0xFF1E40AF),
+    Color(0xFF059669),
+    Color(0xFFF97316),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final hotel = proposal['hotel'] as Map<String, dynamic>?;
     final transport = proposal['transport'] as Map<String, dynamic>?;
     final highlights = proposal['highlights'] as List? ?? [];
     final totalPrice = proposal['total_price'];
-    final colors = [
-      const Color(0xFF1E40AF),
-      const Color(0xFF059669),
-      const Color(0xFFF97316),
-    ];
-    final cardColor = colors[index % colors.length];
+    final cardColor = _colors[index % _colors.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-              color: cardColor.withOpacity(0.08),
+              color: cardColor.withOpacity(0.1),
               blurRadius: 16,
               offset: const Offset(0, 4))
         ],
@@ -256,38 +304,37 @@ class _ProposalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // En-tête colorée
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: cardColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                       color: Colors.white24,
                       borderRadius: BorderRadius.circular(8)),
                   child: Center(
-                    child: Text('${index + 1}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
-                  ),
+                      child: Text('${index + 1}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold))),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     proposal['title'] ?? 'Option ${index + 1}',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 15),
+                        fontSize: 14),
                   ),
                 ),
               ],
@@ -299,12 +346,17 @@ class _ProposalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (transport != null)
-                  _TransportRow(transport: transport),
-                if (hotel != null) ...[const SizedBox(height: 12), _HotelRow(hotel: hotel)],
+                  _DetailRow(
+                    icon: Icons.train,
+                    color: const Color(0xFF1E40AF),
+                    title: transport['type'] ?? 'Transport',
+                    subtitle: transport['details'],
+                  ),
+                if (hotel != null) ...[const SizedBox(height: 10), _HotelRow(hotel: hotel)],
                 if (highlights.isNotEmpty) ...[const SizedBox(height: 12), _HighlightsList(highlights: highlights)],
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -313,29 +365,30 @@ class _ProposalCard extends StatelessWidget {
                       children: [
                         const Text('Prix total',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF6B7280))),
-                        Text(
-                          '${totalPrice ?? '?'}€',
-                          style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: cardColor),
-                        ),
+                                fontSize: 11,
+                                color: Color(0xFF9CA3AF))),
+                        Text('${totalPrice ?? '?'}€',
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: cardColor)),
                       ],
                     ),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: onBook,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: cardColor,
-                        minimumSize: const Size(140, 44),
+                        minimumSize: const Size(130, 44),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('Réserver',
+                      icon: const Icon(Icons.credit_card,
+                          size: 16, color: Colors.white),
+                      label: const Text('Payer',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14)),
+                              fontSize: 14,
+                              color: Colors.white)),
                     ),
                   ],
                 ),
@@ -348,31 +401,38 @@ class _ProposalCard extends StatelessWidget {
   }
 }
 
-class _TransportRow extends StatelessWidget {
-  final Map<String, dynamic> transport;
-  const _TransportRow({required this.transport});
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String? subtitle;
+  const _DetailRow(
+      {required this.icon,
+      required this.color,
+      required this.title,
+      this.subtitle});
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
-              color: const Color(0xFF1E40AF).withOpacity(0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8)),
-          child:
-              const Icon(Icons.train, color: Color(0xFF1E40AF), size: 18),
+          child: Icon(icon, color: color, size: 16),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(transport['type'] ?? 'Transport',
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              if (transport['details'] != null)
-                Text(transport['details'],
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+              if (subtitle != null)
+                Text(subtitle!,
                     style: const TextStyle(
                         color: Color(0xFF6B7280), fontSize: 12)),
             ],
@@ -393,34 +453,32 @@ class _HotelRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
               color: const Color(0xFFF97316).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8)),
           child: const Icon(Icons.hotel,
-              color: Color(0xFFF97316), size: 18),
+              color: Color(0xFFF97316), size: 16),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(hotel['name'] ?? 'Hôtel',
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13)),
               Row(
                 children: [
-                  Row(
-                    children: List.generate(
-                        stars,
-                        (_) => const Icon(Icons.star,
-                            color: Color(0xFFF59E0B), size: 12)),
-                  ),
-                  const SizedBox(width: 6),
+                  ...List.generate(
+                      stars,
+                      (_) => const Icon(Icons.star,
+                          color: Color(0xFFF59E0B), size: 11)),
+                  const SizedBox(width: 4),
                   Text(
-                    '${hotel['nights'] ?? '?'} nuits · ${hotel['price_per_night'] ?? '?'}€/nuit',
-                    style: const TextStyle(
-                        color: Color(0xFF6B7280), fontSize: 12),
-                  ),
+                      '${hotel['nights'] ?? '?'} nuits · ${hotel['price_per_night'] ?? '?'}€/nuit',
+                      style: const TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 11)),
                 ],
               ),
             ],
@@ -442,20 +500,21 @@ class _HighlightsList extends StatelessWidget {
         const Text('Points forts',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
+                fontSize: 12,
                 color: Color(0xFF374151))),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Wrap(
           spacing: 6,
           runSpacing: 6,
           children: highlights
               .map((h) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                        horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('✓  $h',
+                    child: Text('✓ $h',
                         style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF374151))),
@@ -463,58 +522,6 @@ class _HighlightsList extends StatelessWidget {
               .toList(),
         ),
       ],
-    );
-  }
-}
-
-class _BookingConfirmSheet extends StatelessWidget {
-  final dynamic proposal;
-  const _BookingConfirmSheet({required this.proposal});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 20),
-          const Icon(Icons.credit_card,
-              size: 48, color: Color(0xFF1E40AF)),
-          const SizedBox(height: 12),
-          const Text('Confirmer la réservation',
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(
-            'Total : ${proposal['total_price'] ?? '?'}€',
-            style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E40AF)),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Le paiement Stripe sera disponible prochainement.',
-            textAlign: TextAlign.center,
-            style:
-                TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
     );
   }
 }
