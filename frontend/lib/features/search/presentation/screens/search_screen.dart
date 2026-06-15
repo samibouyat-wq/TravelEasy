@@ -89,9 +89,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  String _formatDate(DateTime? d) {
-    if (d == null) return '';
-    return DateFormat('dd MMM yyyy', 'fr').format(d);
+  String _formatDate(DateTime d) {
+    return DateFormat('dd/MM/yyyy').format(d);
   }
 
   @override
@@ -137,7 +136,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   Expanded(
                     child: _DateButton(
                       label: _departureDate != null
-                          ? _formatDate(_departureDate)
+                          ? _formatDate(_departureDate!)
                           : 'Départ',
                       icon: Icons.flight_takeoff,
                       hasValue: _departureDate != null,
@@ -148,7 +147,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   Expanded(
                     child: _DateButton(
                       label: _returnDate != null
-                          ? _formatDate(_returnDate)
+                          ? _formatDate(_returnDate!)
                           : 'Retour',
                       icon: Icons.flight_land,
                       hasValue: _returnDate != null,
@@ -242,7 +241,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Row(
                 children: [
                   _TransportChip(
-                    value: 'train',
                     label: 'Train',
                     icon: Icons.train,
                     selected: _transport == 'train',
@@ -250,7 +248,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const SizedBox(width: 8),
                   _TransportChip(
-                    value: 'flight',
                     label: 'Avion',
                     icon: Icons.flight,
                     selected: _transport == 'flight',
@@ -258,7 +255,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const SizedBox(width: 8),
                   _TransportChip(
-                    value: 'car',
                     label: 'Voiture',
                     icon: Icons.directions_car,
                     selected: _transport == 'car',
@@ -269,10 +265,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _loading ? null : _search,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E40AF),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
                 child: _loading
                     ? const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -281,13 +273,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white)),
+                                  strokeWidth: 2, color: Colors.white)),
                           SizedBox(width: 12),
-                          Text('Génération en cours...',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600)),
+                          Text('Génération en cours...'),
                         ],
                       )
                     : const Row(
@@ -295,13 +283,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         children: [
                           Icon(Icons.auto_awesome, size: 20),
                           SizedBox(width: 8),
-                          Text('Générer avec l\'IA',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600)),
+                          Text('Générer avec l\'IA'),
                         ],
                       ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -378,14 +364,12 @@ class _DateButton extends StatelessWidget {
 }
 
 class _TransportChip extends StatelessWidget {
-  final String value;
   final String label;
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
   const _TransportChip(
-      {required this.value,
-      required this.label,
+      {required this.label,
       required this.icon,
       required this.selected,
       required this.onTap});
@@ -399,9 +383,7 @@ class _TransportChip extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected
-                ? const Color(0xFF1E40AF)
-                : Colors.white,
+            color: selected ? const Color(0xFF1E40AF) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: selected
