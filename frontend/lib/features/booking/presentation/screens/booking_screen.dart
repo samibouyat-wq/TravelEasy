@@ -1,15 +1,76 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/booking_provider.dart';
 
-class BookingScreen extends ConsumerWidget {
+class BookingScreen extends ConsumerStatefulWidget {
   final String tripId;
   const BookingScreen({super.key, required this.tripId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tripAsync = ref.watch(tripDetailProvider(tripId));
+  ConsumerState<BookingScreen> createState() => _BookingScreenState();
+}
+
+class _BookingScreenState extends ConsumerState<BookingScreen> {
+  Timer? _timer;
+  int _attempts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      final trip = ref.read(tripDetailProvider(widget.tripId)).valueOrNull;
+      final proposals = _extractProposals(trip?['ai_proposals']);
+      if (proposals != null) {
+        _timer?.cancel();
+        return;
+      }
+      _attempts++;
+      if (_attempts > 20) {
+        _timer?.cancel();
+        return;
+      }
+      ref.invalidate(tripDetailProvider(widget.tripId));
+    });
+  }
+
+  List? _extractProposals(dynamic aiProposals) {
+    if (aiProposals == null) return null;
+    if (aiProposals is List) return aiProposals;
+    if (aiProposals is Map) {
+      if (aiProposals['voyages'] is List) return aiProposals['voyages'] as List;
+      if (aiProposals['proposals'] is List)
+        return aiProposals['proposals'] as List;
+      for (final v in aiProposals.values) {
+        if (v is List) return v;
+      }
+    }
+    return null;
+  }
+
+  void _confirmBooking(BuildContext context, dynamic proposal) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _BookingConfirmSheet(proposal: proposal),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tripAsync = ref.watch(tripDetailProvider(widget.tripId));
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -32,9 +93,7 @@ class BookingScreen extends ConsumerWidget {
           final proposals = _extractProposals(trip['ai_proposals']);
           return CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(
-                child: _TripHeader(trip: trip),
-              ),
+              SliverToBoxAdapter(child: _TripHeader(trip: trip)),
               if (proposals == null)
                 const SliverFillRemaining(
                   child: Center(
@@ -61,7 +120,8 @@ class BookingScreen extends ConsumerWidget {
                       (context, i) => _ProposalCard(
                         proposal: proposals[i] as Map<String, dynamic>,
                         index: i,
-                        onBook: () => _confirmBooking(context, proposals[i]),
+                        onBook: () =>
+                            _confirmBooking(context, proposals[i]),
                       ),
                       childCount: proposals.length,
                     ),
@@ -71,28 +131,6 @@ class BookingScreen extends ConsumerWidget {
           );
         },
       ),
-    );
-  }
-
-  List? _extractProposals(dynamic aiProposals) {
-    if (aiProposals == null) return null;
-    if (aiProposals is List) return aiProposals;
-    if (aiProposals is Map) {
-      if (aiProposals['voyages'] is List) return aiProposals['voyages'] as List;
-      if (aiProposals['proposals'] is List) return aiProposals['proposals'] as List;
-      for (final v in aiProposals.values) {
-        if (v is List) return v;
-      }
-    }
-    return null;
-  }
-
-  void _confirmBooking(BuildContext context, dynamic proposal) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _BookingConfirmSheet(proposal: proposal),
     );
   }
 }
@@ -133,7 +171,8 @@ class _TripHeader extends StatelessWidget {
                   style: const TextStyle(color: Colors.white70)),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(Icons.arrow_forward, color: Colors.white54, size: 16),
+                child: Icon(Icons.arrow_forward,
+                    color: Colors.white54, size: 16),
               ),
               const Icon(Icons.place, color: Colors.white70, size: 16),
               const SizedBox(width: 6),
@@ -144,9 +183,11 @@ class _TripHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _InfoChip(Icons.calendar_today, trip['departure_date'] ?? ''),
+              _InfoChip(Icons.calendar_today,
+                  trip['departure_date'] ?? ''),
               const SizedBox(width: 8),
-              _InfoChip(Icons.people, '${trip['num_travelers'] ?? 1} voyageur(s)'),
+              _InfoChip(Icons.people,
+                  '${trip['num_travelers'] ?? 1} voyageur(s)'),
             ],
           ),
         ],
@@ -216,7 +257,8 @@ class _ProposalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: cardColor,
               borderRadius:
@@ -256,7 +298,8 @@ class _ProposalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (transport != null) _TransportRow(transport: transport),
+                if (transport != null)
+                  _TransportRow(transport: transport),
                 if (hotel != null) ...[const SizedBox(height: 12), _HotelRow(hotel: hotel)],
                 if (highlights.isNotEmpty) ...[const SizedBox(height: 12), _HighlightsList(highlights: highlights)],
                 const SizedBox(height: 16),
@@ -270,7 +313,8 @@ class _ProposalCard extends StatelessWidget {
                       children: [
                         const Text('Prix total',
                             style: TextStyle(
-                                fontSize: 12, color: Color(0xFF6B7280))),
+                                fontSize: 12,
+                                color: Color(0xFF6B7280))),
                         Text(
                           '${totalPrice ?? '?'}€',
                           style: TextStyle(
@@ -290,7 +334,8 @@ class _ProposalCard extends StatelessWidget {
                       ),
                       child: const Text('Réserver',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14)),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14)),
                     ),
                   ],
                 ),
@@ -316,7 +361,8 @@ class _TransportRow extends StatelessWidget {
           decoration: BoxDecoration(
               color: const Color(0xFF1E40AF).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.train, color: Color(0xFF1E40AF), size: 18),
+          child:
+              const Icon(Icons.train, color: Color(0xFF1E40AF), size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -351,7 +397,8 @@ class _HotelRow extends StatelessWidget {
           decoration: BoxDecoration(
               color: const Color(0xFFF97316).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.hotel, color: Color(0xFFF97316), size: 18),
+          child: const Icon(Icons.hotel,
+              color: Color(0xFFF97316), size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -394,7 +441,8 @@ class _HighlightsList extends StatelessWidget {
       children: [
         const Text('Points forts',
             style: TextStyle(
-                fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151))),
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,
@@ -409,7 +457,8 @@ class _HighlightsList extends StatelessWidget {
                     ),
                     child: Text('✓  $h',
                         style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF374151))),
+                            fontSize: 11,
+                            color: Color(0xFF374151))),
                   ))
               .toList(),
         ),
@@ -437,11 +486,12 @@ class _BookingConfirmSheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 20),
-          const Icon(Icons.credit_card, size: 48, color: Color(0xFF1E40AF)),
+          const Icon(Icons.credit_card,
+              size: 48, color: Color(0xFF1E40AF)),
           const SizedBox(height: 12),
           const Text('Confirmer la réservation',
-              style:
-                  TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
             'Total : ${proposal['total_price'] ?? '?'}€',
@@ -454,7 +504,8 @@ class _BookingConfirmSheet extends StatelessWidget {
           const Text(
             'Le paiement Stripe sera disponible prochainement.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+            style:
+                TextStyle(color: Color(0xFF6B7280), fontSize: 13),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
